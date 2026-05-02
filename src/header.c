@@ -1,6 +1,6 @@
+#include "header.h"
 #include "define.h"
 #include <sodium.h>
-#include "header.h"
 
 void seal_header_init(struct seal_header *out)
 {

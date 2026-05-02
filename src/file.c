@@ -1,18 +1,17 @@
 #include "file.h"
 #include "chunk.h"
+#include "define.h"
 #include "error.h"
 #include "util.h"
-#include <asm-generic/errno-base.h>
 #include <endian.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "define.h"
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 int seal_file_read_exact(FILE *f, uint8_t *buf, size_t len)
 {

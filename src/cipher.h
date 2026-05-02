@@ -1,10 +1,10 @@
 #ifndef SEAL_CIPHER_H_
 #define SEAL_CIPHER_H_
 
+#include "define.h"
 #include "header.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "define.h"
 
 struct seal_cipher {
 	uint8_t bnonce[SEAL_BNONCE_LEN];

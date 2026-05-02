@@ -2,9 +2,9 @@
 #define SEAL_CHUNK_H_
 
 #include "cipher.h"
+#include "define.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "define.h"
 
 #define SEAL_CHUNK_MODE_UNDEF 0
 #define SEAL_CHUNK_MODE_PLAIN 1

@@ -2,10 +2,9 @@
 #include "define.h"
 #include "error.h"
 #include "header.h"
-#include <sodium/crypto_aead_aes256gcm.h>
+#include <sodium.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <sodium.h>
 #include <stdio.h>
 #include <string.h>
 

@@ -1,7 +1,6 @@
 #include "cli.h"
 #include "error.h"
 #include "seal.h"
-#include <bits/getopt_core.h>
 #include <getopt.h>
 #include <stddef.h>
 #include <stdint.h>
