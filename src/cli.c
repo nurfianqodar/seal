@@ -23,6 +23,10 @@ static seal_error seal_cli_mode_from_str(const char *str,
 	return SEAL_E_INVAL;
 }
 
+static int seal_cli_get_password(const char *prompt, char *out)
+{
+}
+
 static const struct option long_options[] = {
 	{ "input", required_argument, 0, 'i' },
 	{ "output", required_argument, 0, 'o' },
@@ -85,6 +89,7 @@ seal_error seal_cli_run(struct seal_cli_config *cfg)
 	char *_pwd = getpass("password: ");
 	char pwd[SEAL_CLI_PWD_MAX];
 	strncpy(pwd, _pwd, SEAL_CLI_PWD_MAX);
+	pwd[SEAL_CLI_PWD_MAX - 1] = '\0';
 	size_t pwd_len = strnlen(pwd, SEAL_CLI_PWD_MAX);
 	seal_error ret;
 
