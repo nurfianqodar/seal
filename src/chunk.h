@@ -15,7 +15,7 @@ struct seal_chunk {
 	uint8_t buf[SEAL_CHUNK_LEN];
 	uint8_t tag[SEAL_TAG_LEN];
 	int mode;
-	size_t len;
+	uint32_t len;
 };
 
 int seal_chunk_encrypt(struct seal_chunk *chunk,

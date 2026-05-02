@@ -13,6 +13,10 @@ typedef enum {
 	SEAL_E_NOTPLAINFILE = 6,
 	SEAL_E_NOTCIPHERFILE = 7,
 	SEAL_E_CREATE = 8,
+	SEAL_E_READ = 9,
+	SEAL_E_WRITE = 10,
+	SEAL_E_EOF = 11,
+	SEAL_E_CORRUPT = 12,
 } seal_error;
 
 void seal_error_set_msg(const char *msg);
