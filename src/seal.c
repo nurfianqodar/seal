@@ -158,8 +158,8 @@ int seal_encrypt(const char *_ipath, const char *_opath, const uint8_t *pwd,
 		 size_t pwd_len, bool override)
 {
 	char ipath[PATH_MAX], opath[PATH_MAX], tmp_opath[PATH_MAX];
-	strncpy(ipath, _ipath, PATH_MAX);
-	strncpy(opath, _opath, PATH_MAX);
+	snprintf(ipath, PATH_MAX, "%s", _ipath);
+	snprintf(opath, PATH_MAX, "%s", _opath);
 
 	if (!seal_file_path_is_exists(ipath)) {
 		seal_error_set_msg("input file not found");
@@ -218,8 +218,8 @@ int seal_decrypt(const char *_ipath, const char *_opath, const uint8_t *pwd,
 		 size_t pwd_len, bool override)
 {
 	char ipath[PATH_MAX], opath[PATH_MAX], tmp_opath[PATH_MAX];
-	strncpy(ipath, _ipath, PATH_MAX);
-	strncpy(opath, _opath, PATH_MAX);
+	snprintf(ipath, PATH_MAX, "%s", _ipath);
+	snprintf(opath, PATH_MAX, "%s", _opath);
 
 	if (!seal_file_path_is_exists(ipath)) {
 		seal_error_set_msg("input file not found");

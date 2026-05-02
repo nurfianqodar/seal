@@ -1,6 +1,6 @@
 CC			:= gcc
-CPPFLAGS	:= -Isrc -DDEBUG
-CFLAGS		:= -std=gnu23 -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -Wall -Wextra
+CPPFLAGS	:= -Isrc -DNDEBUG
+CFLAGS		:= -std=gnu23 -O2 -fsanitize=address,undefined -fno-omit-frame-pointer -Wall -Wextra
 LDFLAGS		:= -lsodium -lc
 
 SRCS		:= $(wildcard src/*.c)
