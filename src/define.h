@@ -24,4 +24,6 @@ _Static_assert(SEAL_BNONCE_LEN + SEAL_PNONCE_LEN == SEAL_NONCE_LEN);
 #define SEAL_OPSLIMIT crypto_pwhash_OPSLIMIT_MODERATE
 #define SEAL_SALT_LEN 16
 
+#define SEAL_KEYDRV_ALG crypto_pwhash_ALG_ARGON2ID13
+
 #endif

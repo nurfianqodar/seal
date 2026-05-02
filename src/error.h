@@ -6,6 +6,9 @@
 typedef enum {
 	SEAL_OK = 0,
 	SEAL_E_INVAL = 1, /* invalid arguments */
+	SEAL_E_KEYDRV = 2,
+	SEAL_E_ENCRYPT = 3,
+	SEAL_E_DECRYPT = 4,
 } seal_error;
 
 void seal_error_set_msg(const char *msg);
