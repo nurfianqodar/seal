@@ -32,19 +32,44 @@ int seal_file_read_exact(FILE *f, uint8_t *buf, size_t len)
 	while (readn < len) {
 		n = fread(buf + readn, 1, len - readn, f);
 		if (n == 0) {
-			if (ferror(f)) {
-				seal_error_set_msg(strerror(errno));
-				return SEAL_E_READ;
-			}
 			if (feof(f)) {
 				seal_error_set_msg("source data not enough");
 				return SEAL_E_EOF;
+			}
+			if (ferror(f)) {
+				seal_error_set_msg("read error");
+				return SEAL_E_READ;
 			}
 			seal_error_set_msg("read has no progress");
 			return SEAL_E_EOF;
 		}
 		readn += n;
 	}
+	return SEAL_OK;
+}
+
+static int seal_file_has_magic(FILE *f, bool *has_magic)
+{
+	size_t readn, n;
+	readn = 0;
+
+	uint8_t magic_buf[SEAL_MAGIC_LEN];
+
+	while (readn < SEAL_MAGIC_LEN) {
+		n = fread(magic_buf + readn, 1, SEAL_MAGIC_LEN - readn, f);
+		if (n == 0) {
+			if (feof(f)) {
+				break;
+			}
+			if (ferror(f)) {
+				seal_error_set_msg("read error");
+				return SEAL_E_READ;
+			}
+			break;
+		}
+		readn += n;
+	}
+	*has_magic = seal_eql(SEAL_MAGIC, magic_buf, SEAL_MAGIC_LEN);
 	return SEAL_OK;
 }
 
@@ -86,58 +111,45 @@ int seal_file_open(FILE **f_ptr, const char *path, int mode)
 		seal_error_set_msg("invalid open mode");
 		return SEAL_E_INVAL;
 	}
-
 	if (!seal_file_path_is_exists(path)) {
+		seal_error_set_msg("file not found");
 		return SEAL_E_NOENT;
 	}
-
 	FILE *file = fopen(path, "rb");
 	if (!file) {
-		seal_error_set_msg(strerror(errno));
+		seal_error_set_msg("open file failed");
 		return SEAL_E_OPEN;
 	}
 
-	uint8_t magic_buf[SEAL_MAGIC_LEN];
-	seal_memzero(magic_buf, SEAL_MAGIC_LEN);
+	int ret;
+	bool has_magic;
+	ret = seal_file_has_magic(file, &has_magic);
+	if (ret != SEAL_OK) {
+		return ret;
+	}
 
-	size_t readn = 0;
-	size_t n;
-	while (readn < SEAL_MAGIC_LEN) {
-		n = fread(magic_buf + readn, 1, SEAL_MAGIC_LEN - readn, file);
-		if (0 == n) {
-			if (feof(file)) {
-				break;
-			}
-			if (ferror(file)) {
-				seal_error_set_msg(strerror(errno));
-				fclose(file);
-				return SEAL_E_OPEN;
-			}
-			break;
+	switch (mode) {
+	case SEAL_FILE_MODE_PLAIN: {
+		if (has_magic) {
+			seal_file_close(&file);
+			seal_error_set_msg("file already encrypted");
+			return SEAL_E_NOTPLAINFILE;
 		}
-		readn += n;
+		if (0 != fseek(file, 0, SEEK_SET)) {
+			seal_file_close(&file);
+			seal_error_set_msg("open file error");
+			return SEAL_E_OPEN;
+		}
+		break;
 	}
-	printf("read magic done\n");
-
-	bool is_valid_magic = seal_eql(SEAL_MAGIC, magic_buf, SEAL_MAGIC_LEN);
-	printf("found magic: %.*s\n", (int)readn, magic_buf);
-	if (is_valid_magic && mode == SEAL_FILE_MODE_CIPHER) {
-		printf("cipher file open success\n");
-		*f_ptr = file;
-		return SEAL_OK;
+	case SEAL_FILE_MODE_CIPHER: {
+		if (!has_magic) {
+			seal_file_close(&file);
+			seal_error_set_msg("file not encrypted");
+			return SEAL_E_NOTCIPHERFILE;
+		}
+		break;
 	}
-
-	if (is_valid_magic && mode == SEAL_FILE_MODE_PLAIN) {
-		seal_error_set_msg("file was encrypted");
-		fclose(file);
-		return SEAL_E_NOTPLAINFILE;
-	}
-
-	// reset cursor in plain mode
-	if (0 != fseek(file, 0, SEEK_SET)) {
-		seal_error_set_msg(strerror(errno));
-		fclose(file);
-		return SEAL_E_OPEN;
 	}
 	*f_ptr = file;
 	return SEAL_OK;
@@ -394,7 +406,7 @@ bool seal_file_path_is_exists(const char *path)
 int seal_file_flush(FILE *f)
 {
 	if (0 != fflush(f)) {
-		seal_error_set_msg(strerror(errno));
+		seal_error_set_msg("flush file error");
 		return SEAL_E_WRITE;
 	}
 	return SEAL_OK;

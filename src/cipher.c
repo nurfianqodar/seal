@@ -99,7 +99,6 @@ int seal_cipher_decrypt(const struct seal_cipher *cipher, const uint8_t *in,
 			  out, NULL, in, len, tag, pnonce, SEAL_PNONCE_LEN,
 			  nonce, cipher->key))) {
 		seal_error_set_msg("decrypt failed");
-        printf("ret sodium = %d\n", ret_sodium);
 		return SEAL_E_DECRYPT;
 	}
 	return SEAL_OK;
