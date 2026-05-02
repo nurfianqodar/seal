@@ -2,6 +2,7 @@
 #include "chunk.h"
 #include "error.h"
 #include "util.h"
+#include <asm-generic/errno-base.h>
 #include <endian.h>
 #include <errno.h>
 #include <stddef.h>
@@ -9,8 +10,9 @@
 #include <stdio.h>
 #include "define.h"
 #include <string.h>
-#include <fcntl.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 static int seal_file_read_exact(FILE *f, uint8_t *buf, size_t len)
 {
@@ -141,6 +143,9 @@ int seal_file_create(FILE **f_ptr, const char *path, bool override)
 	int fd = open(path, oflag, 0644);
 	if (-1 == fd) {
 		seal_error_set_msg(strerror(errno));
+		if (errno == EEXIST) {
+			return SEAL_E_EXISTS;
+		}
 		return SEAL_E_CREATE;
 	}
 	FILE *file = fdopen(fd, "wb");
@@ -362,4 +367,13 @@ int seal_file_write_chunk(FILE *f, struct seal_chunk *chunk)
 	}
 	}
 	return SEAL_OK;
+}
+
+bool seal_file_path_is_exists(const char *path)
+{
+	struct stat st;
+	if (stat(path, &st) != 0) {
+		return false;
+	}
+	return true;
 }

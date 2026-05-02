@@ -17,6 +17,9 @@ typedef enum {
 	SEAL_E_WRITE = 10,
 	SEAL_E_EOF = 11,
 	SEAL_E_CORRUPT = 12,
+	SEAL_E_EXISTS = 13,
+	SEAL_E_NOENT = 14,
+	SEAL_E_MOVE = 15,
 } seal_error;
 
 void seal_error_set_msg(const char *msg);

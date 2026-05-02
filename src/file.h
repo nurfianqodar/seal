@@ -17,4 +17,6 @@ int seal_file_write_header(FILE *f, const struct seal_header *header);
 int seal_file_read_chunk(FILE *f, struct seal_chunk *chunk, int mode);
 int seal_file_write_chunk(FILE *f, struct seal_chunk *chunk);
 
+bool seal_file_path_is_exists(const char *path);
+
 #endif
