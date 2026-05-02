@@ -1,30 +1,22 @@
 #include "error.h"
-#include "seal.h"
 #include <stddef.h>
 #include <stdint.h>
+#include "cli.h"
 #include <stdio.h>
-#include <string.h>
 
 int main(int argc, const char **argv)
 {
-	(void)argc;
-	(void)argv;
-
-	const char *ipath = "compile_commands.json";
-	const char *opath = "compile_commands.json.seal";
-	const char *pwd = "secretpassword";
-
-	const size_t pwd_len = strlen(pwd);
-
-	if (SEAL_OK !=
-	    seal_encrypt(ipath, opath, (const uint8_t *)pwd, pwd_len, false)) {
-		return 1;
+	struct seal_cli_config cfg;
+	int ret;
+	ret = seal_cli_config_parse(argc, argv, &cfg);
+	if (ret != SEAL_OK) {
+		printf("%s\n", seal_error_get_msg());
+		return ret;
 	}
-
-	if (SEAL_OK !=
-	    seal_decrypt(opath, opath, (const uint8_t *)pwd, pwd_len, true)) {
-		return 1;
+	ret = seal_cli_run(&cfg);
+	if (ret != SEAL_OK) {
+		printf("%s\n", seal_error_get_msg());
+		return ret;
 	}
-
-	return 69;
+	return SEAL_OK;
 }
