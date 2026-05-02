@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sodium.h>
+#include <stdio.h>
 #include <string.h>
 
 static void derive_nonce(uint8_t *out, const uint8_t *bnonce,
@@ -93,10 +94,12 @@ int seal_cipher_decrypt(const struct seal_cipher *cipher, const uint8_t *in,
 	uint8_t nonce[SEAL_NONCE_LEN];
 	derive_nonce(nonce, cipher->bnonce, pnonce);
 
-	if (0 != crypto_aead_aes256gcm_decrypt_detached(out, NULL, in, len, tag,
-							pnonce, SEAL_PNONCE_LEN,
-							nonce, cipher->key)) {
+	int ret_sodium;
+	if (0 != (ret_sodium = crypto_aead_aes256gcm_decrypt_detached(
+			  out, NULL, in, len, tag, pnonce, SEAL_PNONCE_LEN,
+			  nonce, cipher->key))) {
 		seal_error_set_msg("decrypt failed");
+        printf("ret sodium = %d\n", ret_sodium);
 		return SEAL_E_DECRYPT;
 	}
 	return SEAL_OK;

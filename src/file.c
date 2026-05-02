@@ -14,7 +14,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-static int seal_file_read_exact(FILE *f, uint8_t *buf, size_t len)
+int seal_file_read_exact(FILE *f, uint8_t *buf, size_t len)
 {
 	if (!f) {
 		seal_error_set_msg("file cannot null");
@@ -30,7 +30,7 @@ static int seal_file_read_exact(FILE *f, uint8_t *buf, size_t len)
 	size_t readn, n;
 	readn = 0;
 	while (readn < len) {
-		n = fread(buf + readn, 1, len, f);
+		n = fread(buf + readn, 1, len - readn, f);
 		if (n == 0) {
 			if (ferror(f)) {
 				seal_error_set_msg(strerror(errno));
@@ -48,7 +48,7 @@ static int seal_file_read_exact(FILE *f, uint8_t *buf, size_t len)
 	return SEAL_OK;
 }
 
-static int seal_file_write_exact(FILE *f, const uint8_t *buf, size_t len)
+int seal_file_write_exact(FILE *f, const uint8_t *buf, size_t len)
 {
 	if (!f) {
 		seal_error_set_msg("file cannot null");
@@ -80,12 +80,17 @@ static int seal_file_write_exact(FILE *f, const uint8_t *buf, size_t len)
 
 int seal_file_open(FILE **f_ptr, const char *path, int mode)
 {
-	if (mode != SEAL_FILE_MODE_PLAIN || mode != SEAL_FILE_MODE_CIPHER) {
+	*f_ptr = NULL;
+
+	if (mode != SEAL_FILE_MODE_PLAIN && mode != SEAL_FILE_MODE_CIPHER) {
 		seal_error_set_msg("invalid open mode");
 		return SEAL_E_INVAL;
 	}
 
-	*f_ptr = NULL;
+	if (!seal_file_path_is_exists(path)) {
+		return SEAL_E_NOENT;
+	}
+
 	FILE *file = fopen(path, "rb");
 	if (!file) {
 		seal_error_set_msg(strerror(errno));
@@ -108,14 +113,20 @@ int seal_file_open(FILE **f_ptr, const char *path, int mode)
 				fclose(file);
 				return SEAL_E_OPEN;
 			}
+			break;
 		}
 		readn += n;
 	}
+	printf("read magic done\n");
+
 	bool is_valid_magic = seal_eql(SEAL_MAGIC, magic_buf, SEAL_MAGIC_LEN);
+	printf("found magic: %.*s\n", (int)readn, magic_buf);
 	if (is_valid_magic && mode == SEAL_FILE_MODE_CIPHER) {
+		printf("cipher file open success\n");
 		*f_ptr = file;
 		return SEAL_OK;
 	}
+
 	if (is_valid_magic && mode == SEAL_FILE_MODE_PLAIN) {
 		seal_error_set_msg("file was encrypted");
 		fclose(file);
@@ -280,13 +291,15 @@ int seal_file_read_chunk(FILE *f, struct seal_chunk *chunk, int mode)
 		}
 
 		chunk->mode = SEAL_CHUNK_MODE_CIPHER;
+		chunk->len = len;
 		break;
 	}
 	case SEAL_CHUNK_MODE_PLAIN: {
 		size_t readn, n;
 		readn = 0;
 		while (readn < SEAL_CHUNK_LEN) {
-			n = fread(chunk->buf + readn, 1, SEAL_CHUNK_LEN, f);
+			n = fread(chunk->buf + readn, 1, SEAL_CHUNK_LEN - readn,
+				  f);
 			if (n == 0) {
 				if (feof(f)) {
 					break;
@@ -376,4 +389,13 @@ bool seal_file_path_is_exists(const char *path)
 		return false;
 	}
 	return true;
+}
+
+int seal_file_flush(FILE *f)
+{
+	if (0 != fflush(f)) {
+		seal_error_set_msg(strerror(errno));
+		return SEAL_E_WRITE;
+	}
+	return SEAL_OK;
 }

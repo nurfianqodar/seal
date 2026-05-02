@@ -1,6 +1,7 @@
 #include "seal.h"
 #include "chunk.h"
 #include "cipher.h"
+#include "define.h"
 #include "error.h"
 #include "file.h"
 #include "header.h"
@@ -24,7 +25,19 @@ static int seal_do_encrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
 	int ret;
 	seal_header_init(&header);
 	ret = seal_cipher_init(&cipher, &header, pwd, pwd_len);
-	do {
+
+	ret = seal_file_write_exact(ofile, SEAL_MAGIC, SEAL_MAGIC_LEN);
+	if (ret != SEAL_OK) {
+		return ret;
+	}
+
+	ret = seal_file_write_header(ofile, &header);
+	if (ret != SEAL_OK) {
+		return ret;
+	}
+
+	while (true) {
+		seal_memzero(&chunk, sizeof chunk);
 		ret = seal_file_read_chunk(ifile, &chunk,
 					   SEAL_CHUNK_MODE_PLAIN);
 		if (ret != SEAL_OK) {
@@ -33,6 +46,10 @@ static int seal_do_encrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
 			seal_memzero(&header, sizeof header);
 			return ret;
 		}
+		if (chunk.len == 0) {
+			break;
+		}
+		printf("plain chunk readed = %d\n", chunk.len);
 		ret = seal_chunk_encrypt(&chunk, &cipher);
 		if (ret != SEAL_OK) {
 			seal_memzero(&chunk, sizeof chunk);
@@ -47,7 +64,16 @@ static int seal_do_encrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
 			seal_memzero(&header, sizeof header);
 			return ret;
 		}
-	} while (chunk.len != 0);
+	}
+
+	ret = seal_file_flush(ofile);
+	if (ret != SEAL_OK) {
+		seal_memzero(&chunk, sizeof chunk);
+		seal_memzero(&cipher, sizeof cipher);
+		seal_memzero(&header, sizeof header);
+		return ret;
+	}
+
 	seal_memzero(&chunk, sizeof chunk);
 	seal_memzero(&cipher, sizeof cipher);
 	seal_memzero(&header, sizeof header);
@@ -62,9 +88,26 @@ static int seal_do_decrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
 	struct seal_header header;
 
 	int ret;
-	seal_header_init(&header);
+
+	long pos = ftell(ifile);
+	printf("pos before header = %ld\n", pos);
+
+	ret = seal_file_read_header(ifile, &header);
+	if (ret != SEAL_OK) {
+		return ret;
+	}
+
+	pos = ftell(ifile);
+	printf("pos after header = %ld\n", pos);
+
+	printf("found header\n");
+
 	ret = seal_cipher_init(&cipher, &header, pwd, pwd_len);
-	do {
+	if (ret != SEAL_OK) {
+		return ret;
+	}
+
+	while (true) {
 		ret = seal_file_read_chunk(ifile, &chunk,
 					   SEAL_CHUNK_MODE_CIPHER);
 		if (ret != SEAL_OK) {
@@ -73,6 +116,10 @@ static int seal_do_decrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
 			seal_memzero(&header, sizeof header);
 			return ret;
 		}
+		if (chunk.len == 0) {
+			break;
+		}
+		printf("cipher chunk readed = %d\n", chunk.len);
 		ret = seal_chunk_decrypt(&chunk, &cipher);
 		if (ret != SEAL_OK) {
 			seal_memzero(&chunk, sizeof chunk);
@@ -87,7 +134,7 @@ static int seal_do_decrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
 			seal_memzero(&header, sizeof header);
 			return ret;
 		}
-	} while (chunk.len != 0);
+	}
 	seal_memzero(&chunk, sizeof chunk);
 	seal_memzero(&cipher, sizeof cipher);
 	seal_memzero(&header, sizeof header);
@@ -157,24 +204,28 @@ int seal_encrypt(const char *_ipath, const char *_opath, const uint8_t *pwd,
 
 	ret = seal_file_create(&ofile, tmp_opath, false);
 	if (ret != SEAL_OK) {
-		fclose(ifile);
+		seal_file_close(&ifile);
 		return ret;
 	}
 
 	ret = seal_do_encrypt(ifile, ofile, pwd, pwd_len);
 	if (ret != SEAL_OK) {
-		fclose(ifile);
-		fclose(ofile);
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
 		remove(tmp_opath);
 		return ret;
 	}
 
 	if (0 != rename(tmp_opath, opath)) {
 		seal_error_set_msg(strerror(errno));
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
 		remove(tmp_opath);
 		return SEAL_E_MOVE;
 	}
 
+	seal_file_close(&ifile);
+	seal_file_close(&ofile);
 	return SEAL_OK;
 }
 
@@ -219,23 +270,27 @@ int seal_decrypt(const char *_ipath, const char *_opath, const uint8_t *pwd,
 
 	ret = seal_file_create(&ofile, tmp_opath, false);
 	if (ret != SEAL_OK) {
-		fclose(ifile);
+		seal_file_close(&ifile);
 		return ret;
 	}
 
 	ret = seal_do_decrypt(ifile, ofile, pwd, pwd_len);
 	if (ret != SEAL_OK) {
-		fclose(ifile);
-		fclose(ofile);
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
 		remove(tmp_opath);
 		return ret;
 	}
 
 	if (0 != rename(tmp_opath, opath)) {
 		seal_error_set_msg(strerror(errno));
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
 		remove(tmp_opath);
 		return SEAL_E_MOVE;
 	}
+	seal_file_close(&ifile);
+	seal_file_close(&ofile);
 
 	return SEAL_OK;
 }

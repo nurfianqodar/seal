@@ -1,0 +1,44 @@
+[
+  {
+    "file": "src/define.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Isrc",
+      "-DDEBUG",
+      "-std=gnu23",
+      "-g",
+      "-O0",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-Wall",
+      "-Wextra",
+      "-c",
+      "src/define.c",
+      "-o",
+      "build/define.o"
+    ],
+    "directory": "/home/fynn/Projects/seal",
+    "output": "build/define.o"
+  },
+  {
+    "file": "src/main.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Isrc",
+      "-DDEBUG",
+      "-std=gnu23",
+      "-g",
+      "-O0",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-Wall",
+      "-Wextra",
+      "-c",
+      "src/main.c",
+      "-o",
+      "build/main.o"
+    ],
+    "directory": "/home/fynn/Projects/seal",
+    "output": "build/main.o"
+  }
+]
