@@ -23,10 +23,6 @@ static seal_error seal_cli_mode_from_str(const char *str,
 	return SEAL_E_INVAL;
 }
 
-static int seal_cli_get_password(const char *prompt, char *out)
-{
-}
-
 static const struct option long_options[] = {
 	{ "input", required_argument, 0, 'i' },
 	{ "output", required_argument, 0, 'o' },
