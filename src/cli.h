@@ -4,6 +4,8 @@
 #include "error.h"
 #include <stdint.h>
 
+#define SEAL_CLI_PWD_MAX 1024
+
 enum seal_cli_mode {
 	SEAL_CLI_MODE_ENCRYPT,
 	SEAL_CLI_MODE_DECRYPT,

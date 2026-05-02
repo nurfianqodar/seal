@@ -82,9 +82,10 @@ seal_error seal_cli_config_parse(int argc, const char **argv,
 
 seal_error seal_cli_run(struct seal_cli_config *cfg)
 {
-	char *pwd = getpass("password: ");
-	size_t pwd_len = strlen(pwd);
-
+	char *_pwd = getpass("password: ");
+	char pwd[SEAL_CLI_PWD_MAX];
+	strncpy(pwd, _pwd, SEAL_CLI_PWD_MAX);
+	size_t pwd_len = strnlen(pwd, SEAL_CLI_PWD_MAX);
 	seal_error ret;
 
 	switch (cfg->mode) {
