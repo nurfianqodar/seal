@@ -1,7 +1,7 @@
 CC			:= gcc
 CPPFLAGS	:= -Isrc -DNDEBUG
-CFLAGS		:= -std=gnu23 -O2 -fsanitize=address,undefined -fno-omit-frame-pointer -Wall -Wextra
-LDFLAGS		:= -lsodium -lc
+CFLAGS		:= -std=gnu23 -O2 -fsanitize=undefined -fno-omit-frame-pointer -Wall -Wextra
+LDFLAGS		:= -static -lsodium
 
 SRCS		:= $(wildcard src/*.c)
 OBJS		:= $(SRCS:src/%.c=build/%.o)
