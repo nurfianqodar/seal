@@ -22,5 +22,6 @@ _Static_assert(SEAL_BNONCE_LEN + SEAL_PNONCE_LEN == SEAL_NONCE_LEN);
 #define SEAL_KEY_LEN 32
 #define SEAL_MEMLIMIT crypto_pwhash_MEMLIMIT_MODERATE
 #define SEAL_OPSLIMIT crypto_pwhash_OPSLIMIT_MODERATE
+#define SEAL_SALT_LEN 16
 
 #endif
