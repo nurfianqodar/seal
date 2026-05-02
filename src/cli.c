@@ -8,6 +8,22 @@
 #include <string.h>
 #include <unistd.h>
 
+const char *help_message = //
+	"USAGE:\n"
+	"\tseal <MODE> [OPTIONS]\n"
+	"MODE:\n"
+	"\tencrypt|e\tEncrypt file\n"
+	"\tdecrypt|d\tDecrypt file\n"
+	"OPTIONS:\n"
+	"\t-i, --input PATH\tInput file path (required)\n"
+	"\t-o, --output PATH\tOutput file path (required)\n"
+	"\t-O, --override\t\tOverride output file if exists\n";
+
+void seal_cli_print_help(void)
+{
+	printf("%s", help_message);
+}
+
 static seal_error seal_cli_mode_from_str(const char *str,
 					 enum seal_cli_mode *mode)
 {
@@ -17,6 +33,10 @@ static seal_error seal_cli_mode_from_str(const char *str,
 	}
 	if (strcmp(str, "d") == 0 || strcmp(str, "decrypt") == 0) {
 		*mode = SEAL_CLI_MODE_DECRYPT;
+		return SEAL_OK;
+	}
+	if (strcmp(str, "h") == 0 || strcmp(str, "help") == 0) {
+		*mode = SEAL_CLI_MODE_HELP;
 		return SEAL_OK;
 	}
 	seal_error_set_msg("invalid argument");
@@ -45,6 +65,9 @@ seal_error seal_cli_config_parse(int argc, const char **argv,
 	ret = seal_cli_mode_from_str(mode_str, &out->mode);
 	if (ret != SEAL_OK) {
 		return ret;
+	}
+	if (out->mode == SEAL_CLI_MODE_HELP) {
+		return SEAL_OK;
 	}
 
 	optind = 2;
@@ -82,6 +105,10 @@ seal_error seal_cli_config_parse(int argc, const char **argv,
 
 seal_error seal_cli_run(struct seal_cli_config *cfg)
 {
+	if (cfg->mode == SEAL_CLI_MODE_HELP) {
+		seal_cli_print_help();
+		return SEAL_OK;
+	}
 	char *_pwd = getpass("password: ");
 	char pwd[SEAL_CLI_PWD_MAX];
 	snprintf(pwd, SEAL_CLI_PWD_MAX, "%s", _pwd);
@@ -90,6 +117,9 @@ seal_error seal_cli_run(struct seal_cli_config *cfg)
 	seal_error ret;
 
 	switch (cfg->mode) {
+	case SEAL_CLI_MODE_HELP: {
+		break;
+	}
 	case SEAL_CLI_MODE_ENCRYPT: {
 		char *pwd_rt;
 		pwd_rt = getpass("confirm password: ");

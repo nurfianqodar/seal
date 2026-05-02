@@ -11,6 +11,9 @@ int main(int argc, const char **argv)
 	ret = seal_cli_config_parse(argc, argv, &cfg);
 	if (ret != SEAL_OK) {
 		printf("%s\n", seal_error_get_msg());
+		if (ret == SEAL_E_INVAL) {
+			seal_cli_print_help();
+		}
 		return ret;
 	}
 	ret = seal_cli_run(&cfg);
