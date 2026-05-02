@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -83,7 +84,7 @@ seal_error seal_cli_run(struct seal_cli_config *cfg)
 {
 	char *_pwd = getpass("password: ");
 	char pwd[SEAL_CLI_PWD_MAX];
-	strncpy(pwd, _pwd, SEAL_CLI_PWD_MAX);
+	snprintf(pwd, SEAL_CLI_PWD_MAX, "%s", _pwd);
 	pwd[SEAL_CLI_PWD_MAX - 1] = '\0';
 	size_t pwd_len = strnlen(pwd, SEAL_CLI_PWD_MAX);
 	seal_error ret;
