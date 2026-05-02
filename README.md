@@ -64,4 +64,4 @@ seal e -i file.txt -o out.bin -O
 
 ## License
 
-[GPL-3.0](License)
+[GPL-3.0](LICENSE)
