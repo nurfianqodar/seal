@@ -9,6 +9,10 @@ typedef enum {
 	SEAL_E_KEYDRV = 2,
 	SEAL_E_ENCRYPT = 3,
 	SEAL_E_DECRYPT = 4,
+	SEAL_E_OPEN = 5,
+	SEAL_E_NOTPLAINFILE = 6,
+	SEAL_E_NOTCIPHERFILE = 7,
+	SEAL_E_CREATE = 8,
 } seal_error;
 
 void seal_error_set_msg(const char *msg);
