@@ -7,5 +7,6 @@
 
 int seal_file_open(FILE **f_ptr, const char *path, int mode);
 int seal_file_create(FILE **f_ptr, const char *path, bool override);
+void seal_file_close(FILE **f_ptr);
 
 #endif

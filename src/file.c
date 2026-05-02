@@ -86,3 +86,14 @@ int seal_file_create(FILE **f_ptr, const char *path, bool override)
 	*f_ptr = file;
 	return SEAL_OK;
 }
+
+void seal_file_close(FILE **f_ptr)
+{
+	if (!f_ptr) {
+		return;
+	}
+	if (!*f_ptr) {
+		return;
+	}
+	fclose(*f_ptr);
+}
