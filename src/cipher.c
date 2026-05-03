@@ -15,8 +15,9 @@ static void derive_nonce(uint8_t *out, const uint8_t *bnonce,
 	memcpy(out + SEAL_BNONCE_LEN, pnonce, SEAL_PNONCE_LEN);
 }
 
-int seal_cipher_init(struct seal_cipher *cipher, struct seal_header *header,
-		     const uint8_t *pwd, size_t pwd_len)
+seal_error seal_cipher_init(struct seal_cipher *cipher,
+			    struct seal_header *header, const uint8_t *pwd,
+			    size_t pwd_len)
 {
 	if (0 != crypto_pwhash(cipher->key, SEAL_KEY_LEN, (const char *)pwd,
 			       pwd_len, header->salt, SEAL_OPSLIMIT,
@@ -28,9 +29,10 @@ int seal_cipher_init(struct seal_cipher *cipher, struct seal_header *header,
 	return SEAL_OK;
 }
 
-int seal_cipher_encrypt(const struct seal_cipher *cipher, const uint8_t *in,
-			uint8_t *out, const size_t len, uint8_t *tag_out,
-			const uint8_t *pnonce)
+seal_error seal_cipher_encrypt(const struct seal_cipher *cipher,
+			       const uint8_t *in, uint8_t *out,
+			       const size_t len, uint8_t *tag_out,
+			       const uint8_t *pnonce)
 {
 	if (!cipher) {
 		seal_error_set_msg("cipher cannot null");
@@ -65,9 +67,10 @@ int seal_cipher_encrypt(const struct seal_cipher *cipher, const uint8_t *in,
 	return SEAL_OK;
 }
 
-int seal_cipher_decrypt(const struct seal_cipher *cipher, const uint8_t *in,
-			const uint8_t *tag, uint8_t *out, const size_t len,
-			const uint8_t *pnonce)
+seal_error seal_cipher_decrypt(const struct seal_cipher *cipher,
+			       const uint8_t *in, const uint8_t *tag,
+			       uint8_t *out, const size_t len,
+			       const uint8_t *pnonce)
 {
 	if (!cipher) {
 		seal_error_set_msg("cipher cannot null");
