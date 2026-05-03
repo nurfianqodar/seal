@@ -6,7 +6,6 @@
 #include "file.h"
 #include "header.h"
 #include "util.h"
-#include <errno.h>
 #include <linux/limits.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -15,88 +14,113 @@
 #include <time.h>
 #include <unistd.h>
 
-static int seal_do_encrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
-			   size_t pwd_len)
+static seal_error seal_do_encrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
+				  size_t pwd_len)
 {
+	seal_error ret = SEAL_OK;
+	if (!ifile) {
+		seal_error_set_msg("input file cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+	if (!ofile) {
+		seal_error_set_msg("output file cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+	if (!pwd) {
+		seal_error_set_msg("password cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+	if (pwd_len == 0) {
+		seal_error_set_msg("password cannot empty");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+
 	struct seal_chunk chunk;
 	struct seal_cipher cipher;
 	struct seal_header header;
-
-	int ret;
 	seal_header_init(&header);
 	ret = seal_cipher_init(&cipher, &header, pwd, pwd_len);
 	if (ret != SEAL_OK) {
-		return ret;
+		goto cleanup;
 	}
 	ret = seal_file_write_exact(ofile, SEAL_MAGIC, SEAL_MAGIC_LEN);
 	if (ret != SEAL_OK) {
-		return ret;
+		goto cleanup;
 	}
 	ret = seal_file_write_header(ofile, &header);
 	if (ret != SEAL_OK) {
-		return ret;
+		goto cleanup;
 	}
 	while (true) {
 		seal_memzero(&chunk, sizeof chunk);
 		ret = seal_file_read_chunk(ifile, &chunk,
 					   SEAL_CHUNK_MODE_PLAIN);
 		if (ret != SEAL_OK) {
-			seal_memzero(&chunk, sizeof chunk);
-			seal_memzero(&cipher, sizeof cipher);
-			seal_memzero(&header, sizeof header);
-			return ret;
+			goto cleanup;
 		}
 		if (chunk.len == 0) {
-			break;
+			goto cleanup;
 		}
 		ret = seal_chunk_encrypt(&chunk, &cipher);
 		if (ret != SEAL_OK) {
-			seal_memzero(&chunk, sizeof chunk);
-			seal_memzero(&cipher, sizeof cipher);
-			seal_memzero(&header, sizeof header);
-			return ret;
+			goto cleanup;
 		}
 		ret = seal_file_write_chunk(ofile, &chunk);
 		if (ret != SEAL_OK) {
-			seal_memzero(&chunk, sizeof chunk);
-			seal_memzero(&cipher, sizeof cipher);
-			seal_memzero(&header, sizeof header);
-			return ret;
+			goto cleanup;
 		}
 	}
-
 	ret = seal_file_flush(ofile);
 	if (ret != SEAL_OK) {
-		seal_memzero(&chunk, sizeof chunk);
-		seal_memzero(&cipher, sizeof cipher);
-		seal_memzero(&header, sizeof header);
-		return ret;
+		goto cleanup;
 	}
-
+cleanup:
 	seal_memzero(&chunk, sizeof chunk);
 	seal_memzero(&cipher, sizeof cipher);
 	seal_memzero(&header, sizeof header);
-	return SEAL_OK;
+done:
+	return ret;
 }
 
-static int seal_do_decrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
-			   size_t pwd_len)
+static seal_error seal_do_decrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
+				  size_t pwd_len)
 {
+	seal_error ret = SEAL_OK;
+	if (!ifile) {
+		seal_error_set_msg("input file cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+	if (!ofile) {
+		seal_error_set_msg("output file cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+	if (!pwd) {
+		seal_error_set_msg("password cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+	if (pwd_len == 0) {
+		seal_error_set_msg("password cannot empty");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
 	struct seal_chunk chunk;
 	struct seal_cipher cipher;
 	struct seal_header header;
-
-	int ret;
-
 	ret = seal_file_read_header(ifile, &header);
 	if (ret != SEAL_OK) {
-		return ret;
+		goto cleanup;
 	}
 
 	ret = seal_cipher_init(&cipher, &header, pwd, pwd_len);
 	if (ret != SEAL_OK) {
-		seal_memzero(&header, sizeof header);
-		return ret;
+		goto cleanup;
 	}
 
 	while (true) {
@@ -104,38 +128,42 @@ static int seal_do_decrypt(FILE *ifile, FILE *ofile, const uint8_t *pwd,
 		ret = seal_file_read_chunk(ifile, &chunk,
 					   SEAL_CHUNK_MODE_CIPHER);
 		if (ret != SEAL_OK) {
-			seal_memzero(&cipher, sizeof cipher);
-			seal_memzero(&header, sizeof header);
-			return ret;
+			goto cleanup;
 		}
 		if (chunk.len == 0) {
-			break;
+			goto cleanup;
 		}
 		ret = seal_chunk_decrypt(&chunk, &cipher);
 		if (ret != SEAL_OK) {
-			seal_memzero(&chunk, sizeof chunk);
-			seal_memzero(&cipher, sizeof cipher);
-			seal_memzero(&header, sizeof header);
-			return ret;
+			goto cleanup;
 		}
 		ret = seal_file_write_chunk(ofile, &chunk);
 		if (ret != SEAL_OK) {
-			seal_memzero(&chunk, sizeof chunk);
-			seal_memzero(&cipher, sizeof cipher);
-			seal_memzero(&header, sizeof header);
-			return ret;
+			goto cleanup;
 		}
 	}
+cleanup:
 	seal_memzero(&chunk, sizeof chunk);
 	seal_memzero(&cipher, sizeof cipher);
 	seal_memzero(&header, sizeof header);
-	return SEAL_OK;
+done:
+	return ret;
 }
 
-static void gen_tmp_path(const char *orig, char *tmp)
+static seal_error gen_tmp_path(const char *orig, char *tmp)
 {
-	if (!orig || !tmp)
-		return;
+	seal_error ret = SEAL_OK;
+	if (!orig) {
+		seal_error_set_msg("origin path cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+	if (!orig) {
+		seal_error_set_msg("tmp path buffer cannot null");
+		ret = SEAL_E_INVAL;
+		goto done;
+	}
+
 	const char *last_slash = strrchr(orig, '/');
 	size_t dir_len = 0;
 
@@ -152,127 +180,105 @@ static void gen_tmp_path(const char *orig, char *tmp)
 	} else {
 		snprintf(tmp, PATH_MAX, "./%s", rand_str);
 	}
+
+	if (seal_file_path_is_exists(tmp)) {
+		seal_error_set_msg("unable to create temporary file");
+		ret = SEAL_E_EXISTS;
+		goto done;
+	}
+done:
+	return ret;
 }
 
-int seal_encrypt(const char *_ipath, const char *_opath, const uint8_t *pwd,
-		 size_t pwd_len, bool override)
+seal_error seal_encrypt(const char *_ipath, const char *_opath,
+			const uint8_t *pwd, size_t pwd_len, bool override)
 {
+	seal_error ret;
 	char ipath[PATH_MAX], opath[PATH_MAX], tmp_opath[PATH_MAX];
 	snprintf(ipath, PATH_MAX, "%s", _ipath);
 	snprintf(opath, PATH_MAX, "%s", _opath);
-
-	if (!seal_file_path_is_exists(ipath)) {
-		seal_error_set_msg("input file not found");
-		return SEAL_E_NOENT;
+	ret = gen_tmp_path(opath, tmp_opath);
+	if (ret != SEAL_OK) {
+		goto done;
 	}
-
-	if (seal_file_path_is_exists(opath)) {
-		if (!override) {
-			seal_error_set_msg("output file already exists");
-			return SEAL_E_EXISTS;
-		}
+	if (seal_file_path_is_exists(opath) && !override) {
+		seal_error_set_msg("output file already exists");
+		ret = SEAL_E_EXISTS;
+		goto done;
 	}
-
-	size_t attempt = 0;
-	gen_tmp_path(opath, tmp_opath);
-	while (seal_file_path_is_exists(tmp_opath)) {
-		gen_tmp_path(opath, tmp_opath);
-		attempt += 1;
-		if (attempt >= 10) {
-			seal_error_set_msg("unable to create temporary file");
-			return SEAL_E_EXISTS;
-		}
-	}
-
 	FILE *ifile, *ofile;
-	int ret;
 	ret = seal_file_open(&ifile, ipath, SEAL_FILE_MODE_PLAIN);
 	if (ret != SEAL_OK) {
-		return ret;
+		goto done;
 	}
 	ret = seal_file_create(&ofile, tmp_opath, false);
 	if (ret != SEAL_OK) {
-		seal_file_close(&ifile);
-		return ret;
+		goto close_input;
 	}
 	ret = seal_do_encrypt(ifile, ofile, pwd, pwd_len);
 	if (ret != SEAL_OK) {
-		seal_file_close(&ifile);
-		seal_file_close(&ofile);
-		remove(tmp_opath);
-		return ret;
+		goto cleanup;
 	}
 	if (0 != rename(tmp_opath, opath)) {
-		seal_error_set_msg(strerror(errno));
-		seal_file_close(&ifile);
-		seal_file_close(&ofile);
-		remove(tmp_opath);
-		return SEAL_E_MOVE;
+		ret = SEAL_E_MOVE;
+		seal_error_set_msg("unable to create output from tmp");
+		goto cleanup;
 	}
-	seal_file_close(&ifile);
+cleanup:
 	seal_file_close(&ofile);
-	return SEAL_OK;
+	if (ret != SEAL_OK) {
+		remove(tmp_opath);
+	}
+close_input:
+	seal_file_close(&ifile);
+done:
+	return ret;
 }
 
-int seal_decrypt(const char *_ipath, const char *_opath, const uint8_t *pwd,
-		 size_t pwd_len, bool override)
+seal_error seal_decrypt(const char *_ipath, const char *_opath,
+			const uint8_t *pwd, size_t pwd_len, bool override)
 {
+	seal_error ret = SEAL_OK;
 	char ipath[PATH_MAX], opath[PATH_MAX], tmp_opath[PATH_MAX];
 	snprintf(ipath, PATH_MAX, "%s", _ipath);
 	snprintf(opath, PATH_MAX, "%s", _opath);
-
-	if (!seal_file_path_is_exists(ipath)) {
-		seal_error_set_msg("input file not found");
-		return SEAL_E_NOENT;
+	if (seal_file_path_is_exists(opath) && !override) {
+		seal_error_set_msg("output file already exists");
+		ret = SEAL_E_EXISTS;
+		goto done;
 	}
-
-	if (seal_file_path_is_exists(opath)) {
-		if (!override) {
-			seal_error_set_msg("output file already exists");
-			return SEAL_E_EXISTS;
-		}
-	}
-
-	size_t attempt = 0;
-	gen_tmp_path(opath, tmp_opath);
-	while (seal_file_path_is_exists(tmp_opath)) {
-		gen_tmp_path(opath, tmp_opath);
-		attempt += 1;
-		if (attempt >= 10) {
-			seal_error_set_msg("unable to create temporary file");
-			return SEAL_E_EXISTS;
-		}
+	ret = gen_tmp_path(opath, tmp_opath);
+	if (ret != SEAL_OK) {
+		goto done;
 	}
 
 	FILE *ifile, *ofile;
-	int ret;
 	ret = seal_file_open(&ifile, ipath, SEAL_FILE_MODE_CIPHER);
 	if (ret != SEAL_OK) {
-		return ret;
+		goto done;
 	}
 	ret = seal_file_create(&ofile, tmp_opath, false);
 	if (ret != SEAL_OK) {
-		seal_file_close(&ifile);
-		return ret;
+		goto close_input;
 	}
 	ret = seal_do_decrypt(ifile, ofile, pwd, pwd_len);
 	if (ret != SEAL_OK) {
-		seal_file_close(&ifile);
-		seal_file_close(&ofile);
-		remove(tmp_opath);
-		return ret;
+		goto cleanup;
 	}
 
 	if (0 != rename(tmp_opath, opath)) {
-		seal_error_set_msg(strerror(errno));
-		seal_file_close(&ifile);
-		seal_file_close(&ofile);
-		remove(tmp_opath);
-		return SEAL_E_MOVE;
+		ret = SEAL_E_MOVE;
+		seal_error_set_msg("unable to create output from tmp");
+		goto cleanup;
 	}
 
-	seal_file_close(&ifile);
+cleanup:
 	seal_file_close(&ofile);
-
-	return SEAL_OK;
+	if (ret != SEAL_OK) {
+		remove(tmp_opath);
+	}
+close_input:
+	seal_file_close(&ifile);
+done:
+	return ret;
 }
