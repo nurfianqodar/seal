@@ -47,7 +47,7 @@ static seal_error seal_cli_mode_from_str(const char *str,
 static const struct option long_options[] = {
 	{ "input", required_argument, 0, 'i' },
 	{ "output", required_argument, 0, 'o' },
-	{ "override", required_argument, 0, 'O' },
+	{ "override", no_argument, 0, 'O' },
 	{ 0, 0, 0, 0 },
 };
 static const char *short_options = "i:o:O";
@@ -76,6 +76,7 @@ seal_error seal_cli_config_parse(int argc, const char **argv,
 	int opt;
 	int options_idx = 0;
 
+    out->override = false;
 	while ((opt = getopt_long(argc, (char **)argv, short_options,
 				  long_options, &options_idx)) != -1) {
 		switch (opt) {
