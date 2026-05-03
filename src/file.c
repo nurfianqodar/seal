@@ -68,7 +68,7 @@ static int seal_file_has_magic(FILE *f, bool *has_magic)
 		}
 		readn += n;
 	}
-	*has_magic = seal_eql(SEAL_MAGIC, magic_buf, SEAL_MAGIC_LEN);
+	*has_magic = seal_memequal(SEAL_MAGIC, magic_buf, SEAL_MAGIC_LEN);
 	return SEAL_OK;
 }
 
