@@ -3,6 +3,7 @@
 
 #include "cipher.h"
 #include "define.h"
+#include "error.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,10 +19,10 @@ struct seal_chunk {
 	uint32_t len;
 };
 
-int seal_chunk_encrypt(struct seal_chunk *chunk,
-		       const struct seal_cipher *cipher);
+seal_error seal_chunk_encrypt(struct seal_chunk *chunk,
+			      const struct seal_cipher *cipher);
 
-int seal_chunk_decrypt(struct seal_chunk *chunk,
-		       const struct seal_cipher *cipher);
+seal_error seal_chunk_decrypt(struct seal_chunk *chunk,
+			      const struct seal_cipher *cipher);
 
 #endif
