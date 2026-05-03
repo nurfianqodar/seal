@@ -1,6 +1,7 @@
 #include "cli.h"
 #include "error.h"
 #include "seal.h"
+#include "util.h"
 #include <getopt.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -8,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-const char *help_message = //
+static const char *help_message = //
 	"USAGE:\n"
 	"\tseal <MODE> [OPTIONS]\n"
 	"MODE:\n"
@@ -19,11 +20,6 @@ const char *help_message = //
 	"\t-i, --input PATH\tInput file path (required)\n"
 	"\t-o, --output PATH\tOutput file path (required)\n"
 	"\t-O, --override\t\tOverride output file if exists\n";
-
-void seal_cli_print_help(void)
-{
-	printf("%s", help_message);
-}
 
 static seal_error seal_cli_mode_from_str(const char *str,
 					 enum seal_cli_mode *mode)
@@ -42,6 +38,26 @@ static seal_error seal_cli_mode_from_str(const char *str,
 	}
 	seal_error_set_msg("invalid argument");
 	return SEAL_E_INVAL;
+}
+
+static seal_error seal_cli_promt_password(uint8_t *out, size_t *out_len,
+					  bool confirm)
+{
+	char *pwd = getpass("password: ");
+	snprintf((char *)out, SEAL_CLI_PWD_MAX, "%s", pwd);
+	out[SEAL_CLI_PWD_MAX - 1] = '\0';
+	*out_len = strnlen(pwd, SEAL_CLI_PWD_MAX);
+
+	if (confirm) {
+		seal_memzero(pwd, *out_len);
+		char *pwd = getpass("confirm password: ");
+		if (!seal_memequal(out, pwd, *out_len)) {
+			seal_error_set_msg("password not match");
+			return SEAL_E_INVAL;
+		}
+		seal_memzero(pwd, *out_len);
+	}
+	return SEAL_OK;
 }
 
 static const struct option long_options[] = {
@@ -76,7 +92,7 @@ seal_error seal_cli_config_parse(int argc, const char **argv,
 	int opt;
 	int options_idx = 0;
 
-    out->override = false;
+	out->override = false;
 	while ((opt = getopt_long(argc, (char **)argv, short_options,
 				  long_options, &options_idx)) != -1) {
 		switch (opt) {
@@ -107,44 +123,52 @@ seal_error seal_cli_config_parse(int argc, const char **argv,
 
 seal_error seal_cli_run(struct seal_cli_config *cfg)
 {
-	if (cfg->mode == SEAL_CLI_MODE_HELP) {
-		seal_cli_print_help();
-		return SEAL_OK;
-	}
-	char *_pwd = getpass("password: ");
-	char pwd[SEAL_CLI_PWD_MAX];
-	snprintf(pwd, SEAL_CLI_PWD_MAX, "%s", _pwd);
-	pwd[SEAL_CLI_PWD_MAX - 1] = '\0';
-	size_t pwd_len = strnlen(pwd, SEAL_CLI_PWD_MAX);
-	seal_error ret;
-
+	seal_error ret = SEAL_OK;
 	switch (cfg->mode) {
 	case SEAL_CLI_MODE_HELP: {
+		seal_cli_print_help();
+		ret = SEAL_OK;
 		break;
 	}
 	case SEAL_CLI_MODE_ENCRYPT: {
-		char *pwd_rt;
-		pwd_rt = getpass("confirm password: ");
-
-		if (strcmp(pwd, pwd_rt) != 0) {
-			seal_error_set_msg("password not match");
-			return SEAL_E_INVAL;
+		uint8_t pwd[SEAL_CLI_PWD_MAX];
+		size_t pwd_len;
+		ret = seal_cli_promt_password(pwd, &pwd_len, true);
+		if (ret != SEAL_OK) {
+			goto done_enc;
 		}
 		ret = seal_encrypt(cfg->ipath, cfg->opath, (const uint8_t *)pwd,
 				   pwd_len, cfg->override);
 		if (ret != SEAL_OK) {
-			return ret;
+			goto done_enc;
 		}
+done_enc:
+		seal_memzero(pwd, SEAL_CLI_PWD_MAX);
+		seal_memzero(&pwd_len, sizeof pwd_len);
 		break;
 	}
 	case SEAL_CLI_MODE_DECRYPT: {
+		uint8_t pwd[SEAL_CLI_PWD_MAX];
+		size_t pwd_len;
+		ret = seal_cli_promt_password(pwd, &pwd_len, false);
+		if (ret != SEAL_OK) {
+			goto done_dec;
+		}
 		ret = seal_decrypt(cfg->ipath, cfg->opath, (const uint8_t *)pwd,
 				   pwd_len, cfg->override);
 		if (ret != SEAL_OK) {
-			return ret;
+			goto done_dec;
 		}
+done_dec:
+		seal_memzero(pwd, SEAL_CLI_PWD_MAX);
+		seal_memzero(&pwd_len, sizeof pwd_len);
 		break;
 	}
 	}
-	return SEAL_OK;
+	return ret;
+}
+
+void seal_cli_print_help(void)
+{
+	printf("%s", help_message);
 }
