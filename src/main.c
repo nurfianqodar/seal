@@ -18,7 +18,7 @@ int main(int argc, const char **argv)
 	}
 	ret = seal_cli_run(&cfg);
 	if (ret != SEAL_OK) {
-		printf("%s\n", seal_error_get_msg());
+		fprintf(stderr, "%s\n", seal_error_get_msg());
 		return ret;
 	}
 	return SEAL_OK;
