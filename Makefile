@@ -41,7 +41,7 @@ build:
 
 clean:
 	rm -rf build/
-	cd $(LIBSODIUM_DIR) && make clean || true
+	cd $(LIBSODIUM_DIR) && make clean-recursive || true
 
 .PHONY: all clean libsodium
 
