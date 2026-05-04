@@ -71,21 +71,20 @@ static const char *short_options = "i:o:O";
 seal_error seal_cli_config_parse(int argc, const char **argv,
 				 struct seal_cli_config *out)
 {
-	if (argc < 2) {
-		seal_error_set_msg("argument not enough");
-		return SEAL_E_INVAL;
-	}
+	if (!out)
+		return seal_error_set_msg("out cannot null"), SEAL_E_INVAL;
 
-	int ret;
+	if (argc < 2)
+		return seal_error_set_msg("argument not enough"), SEAL_E_INVAL;
+
+	seal_error ret;
+
 	const char *mode_str = argv[1];
-
-	ret = seal_cli_mode_from_str(mode_str, &out->mode);
-	if (ret != SEAL_OK) {
+	if ((ret = seal_cli_mode_from_str(mode_str, &out->mode)) != SEAL_OK)
 		return ret;
-	}
-	if (out->mode == SEAL_CLI_MODE_HELP) {
+
+	if (out->mode == SEAL_CLI_MODE_HELP)
 		return SEAL_OK;
-	}
 
 	optind = 2;
 
@@ -116,6 +115,10 @@ seal_error seal_cli_config_parse(int argc, const char **argv,
 	if (!out->ipath) {
 		seal_error_set_msg("input path required");
 		return SEAL_E_INVAL;
+	}
+
+	if (!out->opath) {
+		out->opath = out->ipath;
 	}
 
 	return SEAL_OK;

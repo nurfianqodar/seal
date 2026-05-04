@@ -7,7 +7,7 @@
 int main(int argc, const char **argv)
 {
 	struct seal_cli_config cfg;
-	int ret;
+	seal_error ret;
 	ret = seal_cli_config_parse(argc, argv, &cfg);
 	if (ret != SEAL_OK) {
 		printf("%s\n", seal_error_get_msg());
