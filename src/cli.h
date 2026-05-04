@@ -2,6 +2,7 @@
 #define SEAL_CLI_H_
 
 #include "error.h"
+#include <linux/limits.h>
 #include <stdint.h>
 
 #define SEAL_CLI_PWD_MAX 1024
@@ -14,9 +15,11 @@ enum seal_cli_mode {
 
 struct seal_cli_config {
 	enum seal_cli_mode mode;
-	const char *ipath;
-	const char *opath;
+	char ipath[PATH_MAX];
+	char opath[PATH_MAX];
+	char key_path[PATH_MAX];
 	bool override;
+	bool use_key_file;
 };
 
 seal_error seal_cli_config_parse(int argc, const char **argv,
