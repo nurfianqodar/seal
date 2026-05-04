@@ -12,7 +12,7 @@ seal_error seal_file_read_exact(FILE *f, uint8_t *buf, size_t len);
 seal_error seal_file_write_exact(FILE *f, const uint8_t *buf, size_t len);
 
 seal_error seal_file_open(FILE **f_ptr, const char *path, int mode);
-seal_error seal_file_create(FILE **f_ptr, const char *path, bool override);
+seal_error seal_file_create(FILE **f_ptr, const char *path);
 void seal_file_close(FILE **f_ptr);
 
 seal_error seal_file_read_header(FILE *f, struct seal_header *out);

@@ -151,41 +151,42 @@ seal_error seal_encrypt(const char *_ipath, const char *_opath,
 	if (snprintf(opath, PATH_MAX, "%s", _opath) >= PATH_MAX)
 		return seal_error_set_msg("output path too long"), SEAL_E_INVAL;
 
-	gen_tmp_path(opath, tmp_opath);
-
-	seal_error ret;
-
 	if (seal_file_path_is_exists(opath) && !override) {
 		seal_error_set_msg("output file already exists");
 		return SEAL_E_EXISTS;
 	}
 
-	FILE *ifile = NULL, *ofile = NULL;
+	gen_tmp_path(opath, tmp_opath);
 
+	seal_error ret;
+
+	FILE *ifile = NULL;
 	if ((ret = seal_file_open(&ifile, ipath, SEAL_FILE_MODE_PLAIN)) !=
 	    SEAL_OK)
 		return ret;
 
-	if ((ret = seal_file_create(&ofile, tmp_opath, false)) != SEAL_OK)
-		goto close_input;
+	FILE *ofile = NULL;
+	if ((ret = seal_file_create(&ofile, tmp_opath)) != SEAL_OK) {
+		seal_file_close(&ifile);
+		return ret;
+	}
 
-	if ((ret = seal_do_encrypt(ifile, ofile, pwd, pwd_len)) != SEAL_OK)
-		goto cleanup;
+	if ((ret = seal_do_encrypt(ifile, ofile, pwd, pwd_len)) != SEAL_OK) {
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
+		remove(tmp_opath);
+		return ret;
+	}
 
 	if (0 != rename(tmp_opath, opath)) {
-		ret = SEAL_E_MOVE;
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
+		remove(tmp_opath);
 		seal_error_set_msg("unable to move tmp to output");
-		goto cleanup;
+		return SEAL_E_MOVE;
 	}
 
-cleanup:
-	seal_file_close(&ofile);
-	if (ret != SEAL_OK) {
-		remove(tmp_opath);
-	}
-close_input:
-	seal_file_close(&ifile);
-	return ret;
+	return SEAL_OK;
 }
 
 seal_error seal_decrypt(const char *_ipath, const char *_opath,
@@ -213,24 +214,25 @@ seal_error seal_decrypt(const char *_ipath, const char *_opath,
 	    SEAL_OK)
 		return ret;
 
-	if ((ret = seal_file_create(&ofile, tmp_opath, false)) != SEAL_OK)
-		goto close_input;
+	if ((ret = seal_file_create(&ofile, tmp_opath)) != SEAL_OK) {
+		seal_file_close(&ifile);
+		return ret;
+	}
 
-	if ((ret = seal_do_decrypt(ifile, ofile, pwd, pwd_len)) != SEAL_OK)
-		goto cleanup;
+	if ((ret = seal_do_decrypt(ifile, ofile, pwd, pwd_len)) != SEAL_OK) {
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
+		remove(tmp_opath);
+		return ret;
+	}
 
 	if (0 != rename(tmp_opath, opath)) {
-		ret = SEAL_E_MOVE;
+		seal_file_close(&ifile);
+		seal_file_close(&ofile);
+		remove(tmp_opath);
 		seal_error_set_msg("unable to create output from tmp");
-		goto cleanup;
+		return SEAL_E_MOVE;
 	}
 
-cleanup:
-	seal_file_close(&ofile);
-	if (ret != SEAL_OK) {
-		remove(tmp_opath);
-	}
-close_input:
-	seal_file_close(&ifile);
-	return ret;
+	return SEAL_OK;
 }

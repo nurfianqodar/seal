@@ -142,28 +142,16 @@ seal_error seal_file_open(FILE **f_ptr, const char *path, int mode)
 	return SEAL_OK;
 }
 
-seal_error seal_file_create(FILE **f_ptr, const char *path, bool override)
+seal_error seal_file_create(FILE **f_ptr, const char *path)
 {
 	if (!f_ptr)
 		return seal_error_set_msg("f_ptr cannot null"), SEAL_E_INVAL;
 	if (!path)
 		return seal_error_set_msg("path cannot null"), SEAL_E_INVAL;
 
-	int oflag = O_CREAT | O_CLOEXEC | O_WRONLY;
-	if (override)
-		oflag |= O_TRUNC;
-	else
-		oflag |= O_EXCL;
-
-	int fd = open(path, oflag, 0644);
-	if (-1 == fd) {
-		if (errno == EEXIST) {
-			seal_error_set_msg("file already exist");
-			return SEAL_E_EXISTS;
-		}
-		seal_error_set_msg("open error");
-		return SEAL_E_CREATE;
-	}
+	int fd = open(path, O_CREAT | O_CLOEXEC | O_WRONLY | O_TRUNC, 0600);
+	if (-1 == fd)
+		return seal_error_set_msg("open error"), SEAL_E_CREATE;
 
 	FILE *file = fdopen(fd, "wb");
 	if (!file) {
@@ -171,7 +159,6 @@ seal_error seal_file_create(FILE **f_ptr, const char *path, bool override)
 		seal_error_set_msg("fdopen error");
 		return SEAL_E_CREATE;
 	}
-
 	*f_ptr = file;
 	return SEAL_OK;
 }
