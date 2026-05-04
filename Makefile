@@ -1,6 +1,6 @@
 CC			= gcc
-CPPFLAGS	= -Isrc -DNDEBUG -I$(LIBSODIUM_BUILD)/include
-CFLAGS		= -std=gnu23 -Os -flto -ffunction-sections -fdata-sections -fno-omit-frame-pointer -Wall -Wextra
+CPPFLAGS	= -Isrc -I$(LIBSODIUM_BUILD)/include -DDEBUG -D_GNU_SOURCE
+CFLAGS		= -std=gnu23 -O0 -g -flto -ffunction-sections -fdata-sections -fno-omit-frame-pointer -Wall -Wextra
 LDFLAGS		= $(LIBSODIUM_LIB) -static -flto -Wl,--gc-sections
 
 LIBSODIUM_DIR		= lib/libsodium
